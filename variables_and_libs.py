@@ -15,3 +15,8 @@ from fastapi import FastAPI, Request
 from minio import Minio
 import io
 import logging
+
+
+class DataFromBot(BaseModel):
+    client_id : str
+    phrase : str
