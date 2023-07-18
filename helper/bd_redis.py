@@ -1,4 +1,4 @@
-from variables_and_libs import redis, HOST_NAME_REDIS, PORT_REDIS
+from variables_and_libs import redis, HOST_NAME_REDIS, PORT_REDIS, json
 
 class Redis():
     
@@ -16,8 +16,9 @@ class Redis():
                             db = 0,
                             decode_responses=True)
 
-    def set_redis(self, key:str, value:str):
-        self.r.lpush(key, value)
+    def set_redis(self, key:str, value:dict):
+        
+        self.r.hset(key,json.dumps(value,ensure_ascii=False))
     
     def get_redis(self, key:str):
-        return self.r.lrange(key, 0,-1)
+        return self.r.hgetall(key)

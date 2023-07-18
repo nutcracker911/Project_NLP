@@ -5,8 +5,20 @@ path = os.path.dirname(__file__)
 # путь к проекту
 sys.path.append(path)
 from variables_and_libs import subprocess,Celery,torch,AutoTokenizer,AutoModelForSequenceClassification,NAME_MODEL_NLP_TOXICITY,DICT_MODEL
-
+import pickle
 subprocess.run(["redis-server", f"{path}/helper/config_redis_celery.conf"], stdout=subprocess.PIPE)
+
+from kombu.serialization import register
+
+# регистрируем новый формат сериализации
+register('pickle', lambda x: pickle.dumps(x), lambda x: pickle.loads(x), 'application/x-python-serialize')
+
+
+
+
+
+
+
 
 file = open(f"{path}/helper/config_redis_celery.conf")
 for line in file:
@@ -20,8 +32,13 @@ for line in file:
 
 celery = Celery("task", 
                 backend=redis_url,
+                task_serializer = 'pickle',
+                result_serializer = 'pickle',
+                accept_content = ['pickle'],
+                task_track_started = True,
                 broker_connection_retry_on_startup=True,
                 broker=redis_url)
+
 
 @celery.task(name="start_model_nlp")
 def start_model_nlp():
@@ -29,20 +46,19 @@ def start_model_nlp():
     model = AutoModelForSequenceClassification.from_pretrained(NAME_MODEL_NLP_TOXICITY)
     DICT_MODEL['bert_tokenizer'] = tokenizer
     DICT_MODEL['bert_model'] = model
+    print(DICT_MODEL)
+    return DICT_MODEL
 
 
 
 @celery.task(name="predict_nlp_model")
-def predict_nlp_model(text,aggregate):
+def predict_nlp_model(text):
     with torch.no_grad():
         inputs = DICT_MODEL['bert_tokenizer'](text, return_tensors='pt', truncation=True, padding=True).to(DICT_MODEL['bert_model'].device)
         proba = torch.sigmoid(DICT_MODEL['bert_model'](**inputs).logits).cpu().numpy()
     if isinstance(text, str):
         proba = proba[0]
-    print(proba)
-    if aggregate:
-        return 1 - proba.T[0] * (1 - proba.T[-1])
-    return proba
+    return proba.tolist()
 
 @celery.task(name="kill_model_nlp")
 def kill_model_nlp(name):

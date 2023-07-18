@@ -7,7 +7,7 @@ sys.path.append(path)
 path_celery = (".").join(path.split(os.getcwd())[1].split("/")[1:])
 # путь к файлам для запуска Celery
 
-from variables_and_libs import FastAPI, uvicorn, subprocess, DataFromBot,KillNameModel, BackgroundTasks,DICT_MODEL
+from variables_and_libs import FastAPI, uvicorn, subprocess, DataFromBot,KillNameModel, BackgroundTasks,LABEL
 from helper.bd_redis import Redis
 from celery_server_task import start_model_nlp,predict_nlp_model,kill_model_nlp
 
@@ -23,6 +23,7 @@ subprocess.Popen(["celery", "-A", f"{path_celery}.celery_server_task:celery", "f
 # запуск Celery для работы с очередями
 
 redIs = Redis()
+redIs.connect_redis()
 # инициализация работы класса по работе с Redis
 
 
@@ -30,7 +31,6 @@ app = FastAPI(title="Global API",
               debug=True,
               docs_url="/")
 # инициализация работы FastAPI
-
 
 
 @app.post(
@@ -44,23 +44,25 @@ async def start_model():
             "data":None}
 
 
-
 @app.post(
     "/model/predict",
     description = "Обработка пользовательского сообщения")
-async def predict_phrase_user (item: DataFromBot):
+async def predict_phrase_user(item: DataFromBot):
     # print(item)
-    # redIs.connect_redis()
+    
 
-    # redIs.set_redis(item.client_id,item.phrase )
+    
     
     # print(redIs.get_redis(item.client_id))
-    # print(DICT_MODEL)
-    # kill_model_nlp('bert_model')
-    # print(DICT_MODEL)
+
     
     # print(type(DICT_MODEL['bert_tokenizer']))
-    print(predict_nlp_model.delay(item.phrase,True))
+    result = predict_nlp_model.delay(item.phrase).get()
+    # print(LABEL[str(result.index(max(result)))])
+    
+    redIs.set_redis(item.client_id,{"phrase":item.phrase,
+                                    "label":LABEL[str(result.index(max(result)))]})
+    print(redIs.get_redis(item.client_id))
     
     return item
 
@@ -68,10 +70,10 @@ async def predict_phrase_user (item: DataFromBot):
 @app.post(
     "/model/kill_model",
     description = "Завершение работы моделей")
-async def kill_model(background_tasks:BackgroundTasks, item:KillNameModel):
+async def kill_model(item:KillNameModel):
 
-    # background_tasks.add_task(kill_model_nlp,item.name_model)
     kill_model_nlp.delay(item.name_model)
+    
     return {"status":"complite",
             "data":None}
 

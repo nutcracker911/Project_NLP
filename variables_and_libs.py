@@ -43,3 +43,10 @@ NAME_MODEL_NLP_TOXICITY = 'cointegrated/rubert-tiny-toxicity'
 global DICT_MODEL
 DICT_MODEL = {}
 # хранение всех необходимых нейромоделей в оперативной памяти
+
+global LABEL
+LABEL = {"0":"non-toxic",
+         "1":"insult",
+         "2":"obscenity",
+         "3":"threat",
+         "4":"dangerous"}
