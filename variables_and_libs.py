@@ -18,7 +18,8 @@ import logging
 import torch
 from celery import Celery
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
-
+from kombu.serialization import register
+import pickle
 
 class DataFromBot(BaseModel):
     client_id : str
@@ -26,6 +27,9 @@ class DataFromBot(BaseModel):
     
 class KillNameModel(BaseModel):
     name_model: str
+
+class GetDialogs(BaseModel):
+    client_id : str
 
     
 global HOST_NAME_REDIS

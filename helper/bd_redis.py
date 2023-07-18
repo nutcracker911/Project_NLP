@@ -18,7 +18,7 @@ class Redis():
 
     def set_redis(self, key:str, value:dict):
         
-        self.r.hset(key,json.dumps(value,ensure_ascii=False))
+        self.r.lpush(key,json.dumps(value,ensure_ascii=False))
     
     def get_redis(self, key:str):
-        return self.r.hgetall(key)
+        return self.r.lrange(key, 0,-1)
